@@ -72,4 +72,5 @@ schema/
 parameters/
 script/
 parameters/input.py
+library/.DS_Store
 
