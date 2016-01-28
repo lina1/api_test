@@ -63,6 +63,7 @@ target/
 
 config/
 libs/helper.py
+libs/test_aaa.py
 libs/yaml_parse.py
 logs/*
 output/
