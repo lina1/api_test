@@ -60,3 +60,14 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+
+config/
+libs/helper.py
+libs/yaml_parse.py
+logs/*
+output/
+robot/
+schema/
+parameter/
+script/
+
