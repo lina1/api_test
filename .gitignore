@@ -71,4 +71,5 @@ robot/
 schema/
 parameters/
 script/
+parameters/input.py
 
