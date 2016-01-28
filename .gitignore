@@ -69,6 +69,6 @@ logs/*
 output/
 robot/
 schema/
-parameter/
+parameters/
 script/
 
