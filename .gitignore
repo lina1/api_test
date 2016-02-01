@@ -64,7 +64,7 @@ target/
 config/
 libs/helper.py
 libs/test_aaa.py
-libs/yaml_parse.py
+# libs/yaml_parse.py
 logs/*
 output/
 robot/
@@ -72,6 +72,5 @@ schema/
 parameters/
 script/
 parameters/input.py
-library/.DS_Store
 .idea/*
-
+*.DS_Store
