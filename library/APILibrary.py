@@ -109,7 +109,7 @@ class APILibrary(_logging):
         #     expect = IAIRLINE.IAIRLINE_SCHEMA_PARM_ERROR
         # validate(eval(response_data), expect)
         true = True
-        false = False
+        # false = False
         if schema_type in schema_conf.json_template_list:
             expect = self._get_schema(schema_type)
         else:
@@ -117,9 +117,11 @@ class APILibrary(_logging):
 
             json_data = simplejson.load(f)
             expect = json_data[schema_type]
+            # print "*************"
+            # print expect
 
         # Default: if required is not given, all is required.
-        self._add_required(expect)
+        expect = self._add_required(expect)
 
         # self._info(expect)
         # self._info(response_data)
@@ -134,6 +136,11 @@ class APILibrary(_logging):
         f = open('../schema/%s.json' % schema_type, "r")
         expect = simplejson.load(f)
         return expect
+
+    # def _process_ref(self, expect):
+    #
+    #     if "$ref" in expect.keys():
+    #         pass
 
     def _process_response_data(self, response_data):
 
@@ -153,5 +160,26 @@ class APILibrary(_logging):
         return response_data
 
     def _add_required(self, expect):
-        pass
+
+        if "$ref" in expect.keys():
+            pass
+
+        elif "required" not in expect.keys():
+            expect["required"] = []
+            for item in expect["properties"].keys():
+                expect["required"].append(item)
+                # print item
+                if "type" in expect["properties"][item].keys():
+                    if expect["properties"][item]["type"] == "object":
+                        expect["properties"][item] = self._add_required(expect["properties"][item])
+        elif not expect["required"]:
+            del expect["required"]
+
+        return expect
+
+# a = APILibrary()
+# resp = a.get_response("https://apitest.changker.com/api/feed/88854/commentlist?ckuid=10065726&v=2.2.1&OS=iOS&device_id=0C730756-E3C3-48F2-BAFA-B06C00BD1A0E",
+#                       params="{'pagesize': 10}")
+# a.json_validate(resp, "IFeedCommentList")
+# print a._get_schema("IFeedCommentList")
 

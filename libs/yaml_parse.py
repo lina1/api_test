@@ -11,6 +11,7 @@ import helper
 from config import const
 from libs._logging import _logging
 from parameters.input import para_input
+from parameters.specify_input import specify_input
 
 # from config.const import test_user, base_url
 from config_parse import Config
@@ -76,16 +77,16 @@ def format_url_with_para(url):
 
         if type in ('feed', 'weibo'):
             if url.find("delete") != -1:
-                url = url.replace("@id:\d+", random.choice(str(para_input["feed_id"]["to_delete"])))
+                url = url.replace("@id:\d+", random.choice(para_input["feed_id"]["to_delete"]))
             else:
-                url = url.replace("@id:\d+", random.choice(str(para_input["wid"]["valid"])))
+                url = url.replace("@id:\d+", random.choice(para_input["wid"]["valid"]))
 
         if type in ('comment'):
             if url.find("delete") != -1:
-                url = url.replace("@id:\d+", random.choice(str(para_input["comment_id"]["to_delete"])))
-    #
+                url = url.replace("@id:\d+", random.choice(para_input["comment_id"]["to_delete"]))
+    #properties
     if url.find("@wid:\d+") != -1 :
-        url = url.replace("@wid:\d+", random.choice(str(para_input["wid"]["valid"])))
+        url = url.replace("@wid:\d+", random.choice(para_input["wid"]["valid"]))
     #
     if url.find("@type:\d+") != -1:
         url = url.replace("@type:\d+", "1")
@@ -96,18 +97,32 @@ def format_url_with_para(url):
     return url
 
 
-def generate_params(url, key_list, optional_key_list=[]):
+def generate_params(url, key_list, optional_key_list=[], method=None):
 
     params_lists = list()
 
-    # if len(key_list) >= 2:
+    if method in specify_input.keys():
+        for item in specify_input[method]:
+            params_lists.append({"valid": item})
 
-    for param in generate_valid_param(url, key_list):
-        param_dict = dict()
-        for item in param:
-            for k, v in item.items():
-                param_dict[k] = v
-        params_lists.append({"valid": param_dict})
+    elif len(key_list) >= 2:
+
+        for param in generate_valid_param(url, key_list):
+            param_dict = dict()
+            for item in param:
+                for k, v in item.items():
+                    param_dict[k] = v
+            params_lists.append({"valid": param_dict})
+
+    else:
+        single_params_lists = generate_single_params(key_list)
+        for item in single_params_lists:
+            item_dict = {}
+            item_dict[key_list[0]] = item
+            params_lists.append({"valid": item_dict})
+
+    # print params_lists
+
     if params_lists:
         valid_param = params_lists[0]["valid"]
     else:
@@ -127,8 +142,10 @@ def generate_params(url, key_list, optional_key_list=[]):
             params_lists.append({"invalid": invalid_param})
 
     if len(key_list) >= 2:
-        for single_param in generate_incomplete_params(key_list):
+        for single_param in generate_incomplete_params(url, key_list):
             params_lists.append({"invalid": single_param})
+
+    # print params_lists
 
     return params_lists
 
@@ -160,7 +177,7 @@ def generate_case_by_method(methods, method, load_logging):
                     need_token = True
             else:
                 optional_key_list.append(para)
-        param_lists = generate_params(url, key_list, optional_key_list=optional_key_list)
+        param_lists = generate_params(url, key_list, optional_key_list=optional_key_list, method=method)
         # print param_lists
         generate_case.generate_test_data(method, url=url, para_list=param_lists, need_token=need_token)
         load_logging._info("Generate Done!")
@@ -226,17 +243,18 @@ def generate_optional_param(valid_param={}, optional_key_list=[]):
                 inparam[key] = item
 
                 param_list.append({"no_data": inparam})
-    para_with_all_option = dict(valid_param)
-    for key in optional_key_list:
-        para_with_all_option[key] = random.choice(para_input["key"]["valid"])
-    param_list.append({"valid": para_with_all_option})
+    if optional_key_list:
+        para_with_all_option = dict(valid_param)
+        for key in optional_key_list:
+            para_with_all_option[key] = random.choice(para_input["key"]["valid"])
+        param_list.append({"valid": para_with_all_option})
         # else:
         #     _logging()._warn("%s has no invalid value" % key)
 
     return param_list
 
 
-def generate_incomplete_params(key_list):
+def generate_incomplete_params(url, key_list):
     incomplete_paras_list = []
     for key in key_list:
         key_s = set()
@@ -244,7 +262,9 @@ def generate_incomplete_params(key_list):
         other_key_list = list(set(key_list).difference(key_s))
         key_param = {}
         for other_key in other_key_list:
-            key_param[other_key] = random.choice(para_input[other_key]["valid"])
+            key_pair = generate_key_pair(url, other_key)
+            new = key_pair[other_key]
+            key_param[other_key] = random.choice(para_input[new]["valid"])
         incomplete_paras_list.append(key_param)
 
     return incomplete_paras_list
@@ -269,16 +289,7 @@ def generate_valid_param(url, key_list):
 
     for key in key_list:
 
-        key_pair = {}
-
-        if key == "id":
-
-            # id category
-            type = helper.get_id_type(url, "")
-            new_key = type + "_id"
-            key_pair[key] = new_key
-        else:
-            key_pair[key] = key
+        key_pair = generate_key_pair(url, key)
 
         valid_param = list()
         new = key_pair[key]
@@ -305,16 +316,7 @@ def generate_invalid_param(url, key_list):
 
     for key in key_list:
 
-        key_pair = {}
-
-        if key == "id":
-
-            # id category
-            type = helper.get_id_type(url, "")
-            new_key = type + "_id"
-            key_pair[key] = new_key
-        else:
-            key_pair[key] = key
+        key_pair = generate_key_pair(url, key)
 
         # print key
 
@@ -335,16 +337,33 @@ def generate_invalid_param(url, key_list):
             key_s.add(key)
             other_key_list = list(set(key_list).difference(key_s))
             for other_key in other_key_list:
+                other_key_pair = generate_key_pair(url, other_key)
+                new_other_key = other_key_pair[other_key]
                 # invalid_param.append({other_key: random.choice(para_input[other_key]["valid"])})
-                invalid_param[other_key] = random.choice(para_input[other_key]["valid"])
+                invalid_param[other_key] = random.choice(para_input[new_other_key]["valid"])
             # invalid_param["valid"] = False
             invalid_param_list.append(invalid_param)
 
     return invalid_param_list
 
 
+def generate_key_pair(url, key):
+    key_pair = {}
+
+    if key == "id":
+
+        # id category
+        type = helper.get_id_type(url, "")
+        new_key = type + "_id"
+        key_pair[key] = new_key
+    else:
+        key_pair[key] = key
+
+    return key_pair
+
+
 
 # generate_params("departure", "arrival", "airport")
-file_path = "/Users/lina/Documents/api_2016-01-27.yml"
+file_path = "/Users/lina/Documents/api_2016-02-01.yml"
 # print os.path.getmtime(file_path)
-yaml_load_all(file_path, default_method="ICollectionAdd")
+yaml_load_all(file_path, default_method="IFeedPublishFlight")
